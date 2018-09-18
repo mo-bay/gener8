@@ -1,4 +1,4 @@
-# base58
+# gener8
 ## Cryptocurrency key generation
 ### Private key, Public key, WIF, Address generator for cryptocurrencies.
 Cryptocurrencies use a 256-bit random key which is converted in a WIF (Wallet Interchange Format key), where there is a 256-bit private key and a 512-bit public key. It uses Elliptic Curve Ciphers (ECC) to sign for transactions.
@@ -23,4 +23,4 @@ Install depencies: <br>
 ```pip install ecdsa```
 
 Generate keys: <br>
-```python base58.py```
+```python gener8.py```

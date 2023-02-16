@@ -1,50 +1,46 @@
-# Copyright (c) 2018 asecuritysite.com
-# Copyright (c) 2018 Walter | https://github.com/walterwhite81/
-
 import ecdsa
 import random
 import hashlib
 
 b58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
-def privateKeyToWif(key_hex):    
-    return base58CheckEncode(0x38, key_hex.decode('hex'))
-    
-def privateKeyToPublicKey(s):
-    sk = ecdsa.SigningKey.from_string(s.decode('hex'), curve=ecdsa.SECP256k1)
+def private_key_to_wif(key_hex):    
+    return base58_check_encode(0x38, bytes.fromhex(key_hex))
+
+def private_key_to_public_key(s):
+    sk = ecdsa.SigningKey.from_string(bytes.fromhex(s), curve=ecdsa.SECP256k1)
     vk = sk.verifying_key
-    return ('\04' + sk.verifying_key.to_string()).encode('hex')
-    
-def pubKeyToAddr(s):
+    return b'\x04' + vk.to_string()
+
+def public_key_to_addr(s):
     ripemd160 = hashlib.new('ripemd160')
-    ripemd160.update(hashlib.sha256(s.decode('hex')).digest())
-    return base58CheckEncode(0,ripemd160.digest())
+    ripemd160.update(hashlib.sha256(bytes.fromhex(s)).digest())
+    return base58_check_encode(0, ripemd160.digest())
 
-def keyToAddr(s):
-        return pubKeyToAddr(privateKeyToPublicKey(s))
+def key_to_addr(s):
+    return public_key_to_addr(private_key_to_public_key(s).hex())
 
-def base58encode(n):
+def base58_encode(n):
     result = ''
     while n > 0:
         result = b58[n%58] + result
-        n /= 58
+        n //= 58
     return result
 
-def base58CheckEncode(version, payload):
-    s = chr(version) + payload
-    checksum = hashlib.sha256(hashlib.sha256(s).digest()).digest()[0:4]
+def base58_check_encode(version, payload):
+    s = bytes([version]) + payload
+    checksum = hashlib.sha256(hashlib.sha256(s).digest()).digest()[:4]
     result = s + checksum
-    leadingZeros = countLeadingChars(result, '\0')
-   
-    return 'Z' * leadingZeros + base58encode(base256decode(result))
+    leading_zeros = count_leading_chars(result, b'\0')
+    return 'Z' * leading_zeros + base58_encode(base256decode(result))
 
 def base256decode(s):
     result = 0
     for c in s:
-        result = result * 256 + ord(c)
+        result = result * 256 + c
     return result
 
-def countLeadingChars(s, ch):
+def count_leading_chars(s, ch):
     count = 0
     for c in s:
         if c == ch:
@@ -54,8 +50,8 @@ def countLeadingChars(s, ch):
     return count
 
 private_key = ''.join(['%x' % random.randrange(16) for x in range(0, 64)])
-print 'Private key: ',private_key
-pubKey = privateKeyToPublicKey(private_key)
-print '\nPublic key: ',pubKey
-print '\nWIF: ',privateKeyToWif(private_key)
-print '\nAddress: ',keyToAddr(private_key)
+print('Private key: ', private_key)
+pub_key = private_key_to_public_key(private_key)
+print('\nPublic key: ', pub_key.hex())
+print('\nWIF: ', private_key_to_wif(private_key))
+print('\nAddress: ', key_to_addr(private_key))

@@ -4,43 +4,44 @@ import hashlib
 
 b58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
-def private_key_to_wif(key_hex):    
-    return base58_check_encode(0x38, bytes.fromhex(key_hex))
+def privateKeyToWif(key_hex, prefix):
+    return base58CheckEncode(prefix, key_hex.decode('hex'))
 
-def private_key_to_public_key(s):
-    sk = ecdsa.SigningKey.from_string(bytes.fromhex(s), curve=ecdsa.SECP256k1)
+def privateKeyToPublicKey(s):
+    sk = ecdsa.SigningKey.from_string(s.decode('hex'), curve=ecdsa.SECP256k1)
     vk = sk.verifying_key
-    return b'\x04' + vk.to_string()
+    return ('\04' + sk.verifying_key.to_string()).encode('hex')
 
-def public_key_to_addr(s):
+def pubKeyToAddr(s, prefix):
     ripemd160 = hashlib.new('ripemd160')
-    ripemd160.update(hashlib.sha256(bytes.fromhex(s)).digest())
-    return base58_check_encode(0, ripemd160.digest())
+    ripemd160.update(hashlib.sha256(s.decode('hex')).digest())
+    return base58CheckEncode(prefix, ripemd160.digest())
 
-def key_to_addr(s):
-    return public_key_to_addr(private_key_to_public_key(s).hex())
+def keyToAddr(s, prefix):
+    return pubKeyToAddr(privateKeyToPublicKey(s), prefix)
 
-def base58_encode(n):
+def base58encode(n):
     result = ''
     while n > 0:
         result = b58[n%58] + result
         n //= 58
     return result
 
-def base58_check_encode(version, payload):
-    s = bytes([version]) + payload
-    checksum = hashlib.sha256(hashlib.sha256(s).digest()).digest()[:4]
+def base58CheckEncode(version, payload):
+    s = chr(version) + payload
+    checksum = hashlib.sha256(hashlib.sha256(s).digest()).digest()[0:4]
     result = s + checksum
-    leading_zeros = count_leading_chars(result, b'\0')
-    return 'Z' * leading_zeros + base58_encode(base256decode(result))
+    leadingZeros = countLeadingChars(result, '\0')
+
+    return 'Z' * leadingZeros + base58encode(base256decode(result))
 
 def base256decode(s):
     result = 0
     for c in s:
-        result = result * 256 + c
+        result = result * 256 + ord(c)
     return result
 
-def count_leading_chars(s, ch):
+def countLeadingChars(s, ch):
     count = 0
     for c in s:
         if c == ch:
@@ -49,9 +50,17 @@ def count_leading_chars(s, ch):
             break
     return count
 
-private_key = ''.join(['%x' % random.randrange(16) for x in range(0, 64)])
-print('Private key: ', private_key)
-pub_key = private_key_to_public_key(private_key)
-print('\nPublic key: ', pub_key.hex())
-print('\nWIF: ', private_key_to_wif(private_key))
-print('\nAddress: ', key_to_addr(private_key))
+def generateKeys(prefix_private, prefix_public):
+    private_key = ''.join(['%x' % random.randrange(16) for x in range(0, 64)])
+    print('Private key: {}'.format(private_key))
+    public_key = privateKeyToPublicKey(private_key)
+    print('Public key: {}'.format(public_key))
+    wif_key = privateKeyToWif(private_key, prefix_private)
+    print('WIF key: {}'.format(wif_key))
+    address = keyToAddr(private_key, prefix_public)
+    print('Address: {}'.format(address))
+
+if __name__ == '__main__':
+    prefix_private = int(input("Enter the decimal prefix for the private key: "))
+    prefix_public = int(input("Enter the decimal prefix for the public address: "))
+    generateKeys(prefix_private, prefix_public)
